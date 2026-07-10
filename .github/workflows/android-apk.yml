@@ -16,24 +16,12 @@ jobs:
       - name: دریافت پروژه
         uses: actions/checkout@v6
 
-      - name: آماده‌سازی Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
       - name: آماده‌سازی Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
           cache: gradle
-
-      - name: نصب وابستگی‌ها
-        run: npm ci
-
-      - name: آماده‌سازی نسخه اندروید
-        run: npm run android:sync
 
       - name: ساخت APK
         working-directory: android
