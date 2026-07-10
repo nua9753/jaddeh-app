@@ -14,16 +14,16 @@ jobs:
 
     steps:
       - name: دریافت پروژه
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: آماده‌سازی Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
 
       - name: آماده‌سازی Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
