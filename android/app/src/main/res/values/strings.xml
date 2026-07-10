@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">جاده</string>
+    <string name="title_activity_main">جاده</string>
+    <string name="package_name">com.jaddeh.app</string>
+    <string name="custom_url_scheme">com.jaddeh.app</string>
+</resources>

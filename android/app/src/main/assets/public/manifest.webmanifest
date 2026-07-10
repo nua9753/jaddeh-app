@@ -1,0 +1,15 @@
+{
+  "name": "جاده — رانندگی مستقل",
+  "short_name": "جاده",
+  "description": "برنامه هشت‌هفته‌ای تمرین و مدیریت ترس رانندگی",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2F3F4",
+  "theme_color": "#24272B",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
