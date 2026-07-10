@@ -16,6 +16,15 @@ jobs:
       - name: دریافت پروژه
         uses: actions/checkout@v6
 
+      - name: آماده‌سازی Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: نصب Capacitor
+        run: npm install
+
       - name: آماده‌سازی Java
         uses: actions/setup-java@v5
         with:
@@ -27,7 +36,7 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: ذخیره APK
         uses: actions/upload-artifact@v4
