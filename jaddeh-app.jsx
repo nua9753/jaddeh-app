@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { LESSONS } from "./lessons.js";
 
 const C = {
   bg: "#F2F3F4",
@@ -99,6 +100,7 @@ const DEFAULT_QUOTES = [
 const STORE_KEY = "jaddeh_app_v1";
 
 const PRE_DRIVE_ITEMS = [
+  "دور و بر ماشین را چک کردم",
   "صندلی، آینه‌ها و کمربند را تنظیم کردم",
   "گوشی روی حالت بی‌صدا و دور از دسترس است",
   "مسیر و مقصد را قبل از حرکت بررسی کردم",
@@ -218,6 +220,13 @@ export default function JaddehApp() {
   const [exerciseSteps, setExerciseSteps] = useState({});
   const [sideIndicators, setSideIndicators] = useState({ front: "", rear: "", left: "", right: "" });
   const [indicatorSaved, setIndicatorSaved] = useState("");
+  const [openLesson, setOpenLesson] = useState("slopes");
+  const [lessonNotes, setLessonNotes] = useState({});
+  const [newLessonNote, setNewLessonNote] = useState({});
+  const [customLessons, setCustomLessons] = useState([]);
+  const [newLessonTitle, setNewLessonTitle] = useState("");
+  const [newLessonBody, setNewLessonBody] = useState("");
+  const [showLessonForm, setShowLessonForm] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -238,6 +247,8 @@ export default function JaddehApp() {
         setPreChecks(data.preChecks || {});
         setDimensionLogs(data.dimensionLogs || []);
         setSideIndicators(data.sideIndicators || { front: "", rear: "", left: "", right: "" });
+        setLessonNotes(data.lessonNotes || {});
+        setCustomLessons(data.customLessons || []);
       } else {
         setQuotes(DEFAULT_QUOTES.map((t) => ({ t, mine: false })));
       }
@@ -275,9 +286,9 @@ export default function JaddehApp() {
     }
   }, []);
 
-  const save = useCallback((c, q, l, p = preChecks, d = dimensionLogs, indicators = sideIndicators) => {
-    persist({ checks: c, quotes: q, logs: l, preChecks: p, dimensionLogs: d, sideIndicators: indicators });
-  }, [persist, preChecks, dimensionLogs, sideIndicators]);
+  const save = useCallback((c, q, l, p = preChecks, d = dimensionLogs, indicators = sideIndicators, notes = lessonNotes, custom = customLessons) => {
+    persist({ checks: c, quotes: q, logs: l, preChecks: p, dimensionLogs: d, sideIndicators: indicators, lessonNotes: notes, customLessons: custom });
+  }, [persist, preChecks, dimensionLogs, sideIndicators, lessonNotes, customLessons]);
 
   const toggle = (k) => {
     const next = { ...checks, [k]: !checks[k] };
@@ -379,6 +390,42 @@ export default function JaddehApp() {
     setTimeout(() => setIndicatorSaved(""), 1800);
   };
 
+  const addLessonNote = (lessonId) => {
+    const text = (newLessonNote[lessonId] || "").trim();
+    if (!text) return;
+    const next = { ...lessonNotes, [lessonId]: [...(lessonNotes[lessonId] || []), { id: Date.now(), text }] };
+    setLessonNotes(next);
+    setNewLessonNote((current) => ({ ...current, [lessonId]: "" }));
+    save(checks, quotes, logs, preChecks, dimensionLogs, sideIndicators, next);
+  };
+
+  const removeLessonNote = (lessonId, noteId) => {
+    const next = { ...lessonNotes, [lessonId]: (lessonNotes[lessonId] || []).filter((item) => item.id !== noteId) };
+    setLessonNotes(next);
+    save(checks, quotes, logs, preChecks, dimensionLogs, sideIndicators, next);
+  };
+
+  const addCustomLesson = () => {
+    const title = newLessonTitle.trim();
+    const items = newLessonBody.split("\n").map((item) => item.replace(/^[-•]\s*/, "").trim()).filter(Boolean);
+    if (!title || !items.length) return;
+    const lesson = { id: `custom_${Date.now()}`, title, tag: "درس من", custom: true, sections: [{ title: "نکات درس", items }] };
+    const next = [...customLessons, lesson];
+    setCustomLessons(next);
+    setNewLessonTitle("");
+    setNewLessonBody("");
+    setShowLessonForm(false);
+    setOpenLesson(lesson.id);
+    save(checks, quotes, logs, preChecks, dimensionLogs, sideIndicators, lessonNotes, next);
+  };
+
+  const removeCustomLesson = (lessonId) => {
+    const next = customLessons.filter((lesson) => lesson.id !== lessonId);
+    setCustomLessons(next);
+    if (openLesson === lessonId) setOpenLesson("");
+    save(checks, quotes, logs, preChecks, dimensionLogs, sideIndicators, lessonNotes, next);
+  };
+
   const total = SECTIONS.reduce((a, s) => a + s.items.length, 0);
   const done = Object.values(checks).filter(Boolean).length;
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -386,6 +433,7 @@ export default function JaddehApp() {
 
   const firstFear = logs.length ? logs[logs.length - 1].fear : null;
   const lastFear = logs.length ? logs[0].fear : null;
+  const allLessons = [...LESSONS, ...customLessons];
 
   if (!loaded) {
     return (
@@ -400,7 +448,7 @@ export default function JaddehApp() {
     <button
       onClick={() => setTab(id)}
       style={{
-        flex: 1, padding: "10px 4px", border: "none", cursor: "pointer",
+        flex: "1 1 calc(33.333% - 6px)", minWidth: 92, padding: "10px 4px", border: "none", cursor: "pointer",
         background: tab === id ? C.asphalt : "transparent",
         color: tab === id ? "#fff" : C.sub,
         borderRadius: 10, fontFamily: "inherit", fontSize: 14, fontWeight: tab === id ? 700 : 400,
@@ -412,7 +460,7 @@ export default function JaddehApp() {
   );
 
   return (
-    <div dir="rtl" style={{ fontFamily: "Vazirmatn, Tahoma, sans-serif", minHeight: "100vh", background: C.bg, color: C.text, padding: "16px 12px 60px" }}>
+    <div dir="rtl" style={{ fontFamily: "Vazirmatn, Tahoma, sans-serif", minHeight: "100vh", background: C.bg, color: C.text, padding: "calc(env(safe-area-inset-top, 0px) + 44px) 12px calc(env(safe-area-inset-bottom, 0px) + 60px)" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Lalezar&display=swap');
         * { box-sizing: border-box; }
@@ -455,6 +503,7 @@ export default function JaddehApp() {
           {tabBtn("plan", "پلن")}
           {tabBtn("prepare", "قبل حرکت")}
           {tabBtn("dimensions", "ابعاد خودرو")}
+          {tabBtn("lessons", "درس‌ها")}
           {tabBtn("quotes", "جمله‌ها")}
           {tabBtn("log", "دفترچه ترس")}
         </div>
@@ -504,6 +553,61 @@ export default function JaddehApp() {
               {breathRounds >= 3 && breathing && <p style={{ margin: "12px 0 0", color: "#9FE1CB", fontSize: 13 }}>سه دور کامل شد. هر وقت آماده‌ای حرکت کن.</p>}
             </div>
             <p style={{ color: C.sub, fontSize: 12, lineHeight: 1.8, padding: "0 6px" }}>این تمرین جایگزین ارزیابی ایمنی نیست. اگر خواب‌آلود، بسیار مضطرب یا از نظر جسمی نامساعدی، رانندگی را به زمان دیگری موکول کن.</p>
+          </div>
+        )}
+
+        {tab === "lessons" && (
+          <div>
+            <div style={{ background: C.asphalt, color: "#fff", borderRadius: 14, padding: "16px", marginBottom: 12 }}>
+              <p style={{ margin: 0, fontFamily: "Lalezar", fontSize: 24, color: C.line }}>درس‌های رانندگی</p>
+              <p style={{ margin: "3px 0 0", color: "#B5BABE", fontSize: 12, lineHeight: 1.9 }}>هر فصل را باز کن، نکاتش را مرور کن و تجربه‌های مخصوص ماشین خودت را پایین همان درس اضافه کن.</p>
+            </div>
+            <div style={{ background: "#FDF6EA", border: "1px solid #F0DCB4", color: "#6B4A16", borderRadius: 12, padding: "10px 13px", marginBottom: 12, fontSize: 12, lineHeight: 1.9 }}>تمرین عملی فقط در محل امن و با مربی انجام شود. تابلوها، قانون محل و دفترچهٔ خودروی شما همیشه مقدم‌اند.</div>
+
+            <button onClick={() => setShowLessonForm((shown) => !shown)} style={{ width: "100%", marginBottom: 10, border: `1px dashed ${C.green}`, borderRadius: 12, padding: "11px", background: C.greenBg, color: C.greenDark, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{showLessonForm ? "بستن فرم" : "+ افزودن درس جدید"}</button>
+            {showLessonForm && (
+              <div style={{ background: C.card, border: `1px solid ${C.green}`, borderRadius: 14, padding: "14px", marginBottom: 12 }}>
+                <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700 }}>درس جدید من</p>
+                <input value={newLessonTitle} onChange={(e) => setNewLessonTitle(e.target.value)} placeholder="عنوان درس؛ مثلاً دور زدن در کوچه" style={{ width: "100%", border: `1px solid ${C.border}`, borderRadius: 9, padding: "10px", fontFamily: "inherit", fontSize: 13, outline: "none", background: C.bg, marginBottom: 8 }} />
+                <textarea value={newLessonBody} onChange={(e) => setNewLessonBody(e.target.value)} placeholder={"نکات درس را بنویس؛ هر نکته در یک خط\nمثلاً:\nقبل از حرکت آینه‌ها را ببین\nبا سرعت خیلی کم حرکت کن"} rows={6} style={{ width: "100%", border: `1px solid ${C.border}`, borderRadius: 9, padding: "10px", fontFamily: "inherit", fontSize: 12, lineHeight: 1.8, resize: "vertical", outline: "none", background: C.bg }} />
+                <button onClick={addCustomLesson} disabled={!newLessonTitle.trim() || !newLessonBody.trim()} style={{ marginTop: 9, width: "100%", border: "none", borderRadius: 9, padding: "10px", background: newLessonTitle.trim() && newLessonBody.trim() ? C.green : "#C6CACD", color: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: newLessonTitle.trim() && newLessonBody.trim() ? "pointer" : "default" }}>ساخت این درس</button>
+              </div>
+            )}
+
+            {allLessons.map((lesson) => {
+              const isOpen = openLesson === lesson.id;
+              return (
+                <div key={lesson.id} style={{ background: C.card, border: `1px solid ${isOpen ? C.line : C.border}`, borderRadius: 14, marginBottom: 9, overflow: "hidden" }}>
+                  <button onClick={() => setOpenLesson(isOpen ? "" : lesson.id)} aria-expanded={isOpen} style={{ width: "100%", border: "none", background: isOpen ? "#FDF6EA" : C.card, color: C.text, padding: "13px 14px", display: "flex", alignItems: "center", gap: 10, textAlign: "right", fontFamily: "inherit", cursor: "pointer" }}>
+                    <span style={{ background: isOpen ? C.line : C.asphalt, color: isOpen ? C.asphalt : "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{lesson.tag}</span>
+                    <strong style={{ flex: 1, fontSize: 14 }}>{lesson.title}</strong>
+                    <span style={{ color: C.sub, fontSize: 18 }}>{isOpen ? "−" : "+"}</span>
+                  </button>
+                  {isOpen && (
+                    <div style={{ padding: "4px 14px 14px" }}>
+                      {lesson.custom && <div style={{ textAlign: "left", marginTop: 8 }}><button onClick={() => removeCustomLesson(lesson.id)} style={{ background: "none", border: "none", color: C.red, fontFamily: "inherit", fontSize: 11, cursor: "pointer", padding: 0 }}>حذف این درس</button></div>}
+                      {lesson.sections.map((section) => (
+                        <div key={section.title} style={{ marginTop: 10, borderRadius: 11, padding: "11px 12px", background: section.alert ? "#FAECE7" : C.bg, borderRight: `4px solid ${section.alert ? C.red : C.green}` }}>
+                          <p style={{ margin: "0 0 7px", color: section.alert ? C.red : C.text, fontSize: 13, fontWeight: 700 }}>{section.title}</p>
+                          {section.items.map((item) => <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "4px 0", fontSize: 13, lineHeight: 1.75 }}><span style={{ color: section.alert ? C.red : C.green, fontWeight: 700 }}>•</span><span>{item}</span></div>)}
+                        </div>
+                      ))}
+
+                      <div style={{ marginTop: 13, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+                        <p style={{ margin: "0 0 7px", fontSize: 13, fontWeight: 700 }}>نکته‌های من برای این درس</p>
+                        {(lessonNotes[lesson.id] || []).map((noteItem) => (
+                          <div key={noteItem.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", background: C.greenBg, color: C.greenDark, borderRadius: 9, padding: "8px 10px", marginBottom: 6, fontSize: 12, lineHeight: 1.7 }}><span style={{ flex: 1 }}>{noteItem.text}</span><button onClick={() => removeLessonNote(lesson.id, noteItem.id)} aria-label="حذف نکته" style={{ background: "none", border: "none", color: C.greenDark, fontSize: 17, cursor: "pointer", padding: 0 }}>×</button></div>
+                        ))}
+                        <div style={{ display: "flex", gap: 7 }}>
+                          <input value={newLessonNote[lesson.id] || ""} onChange={(e) => setNewLessonNote((current) => ({ ...current, [lesson.id]: e.target.value }))} onKeyDown={(e) => e.key === "Enter" && addLessonNote(lesson.id)} placeholder={`مثلاً: نشانهٔ من برای ${lesson.title}...`} style={{ flex: 1, minWidth: 0, border: `1px solid ${C.border}`, borderRadius: 9, padding: "9px 10px", fontFamily: "inherit", fontSize: 12, outline: "none", background: C.bg }} />
+                          <button onClick={() => addLessonNote(lesson.id)} style={{ border: "none", borderRadius: 9, padding: "8px 13px", background: C.asphalt, color: "#fff", fontFamily: "inherit", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>افزودن</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
